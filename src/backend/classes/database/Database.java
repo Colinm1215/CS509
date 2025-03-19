@@ -1,5 +1,6 @@
-package backend.classes;
+package backend.classes.database;
 
+import backend.classes.records.Flight;
 import backend.interfaces.DatabaseInterface;
 import backend.interfaces.FlightInterface;
 import enums.AirlineTable;
