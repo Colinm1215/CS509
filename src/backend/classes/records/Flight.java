@@ -1,12 +1,10 @@
 package backend.classes.records;
 
 import backend.interfaces.FlightInterface;
-import lombok.Getter;
 
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 
-@Getter
 public class Flight implements FlightInterface {
     private final int id;
     private final String flightNumber;
@@ -35,6 +33,30 @@ public class Flight implements FlightInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getFlightNumber() {
+        return flightNumber;
+    }
+
+    public String getDepartureAirport() {
+        return departureAirport;
+    }
+
+    public String getArrivalAirport() {
+        return arrivalAirport;
+    }
+
+    public Timestamp getDepartureTime() {
+        return departureTime;
+    }
+
+    public Timestamp getArrivalTime() {
+        return arrivalTime;
     }
 
 

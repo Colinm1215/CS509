@@ -1,8 +1,5 @@
 package enums;
 
-import lombok.Getter;
-
-@Getter
 public enum AirlineTable {
     DELTAS("deltas"),
     SOUTHWESTS("southwests");
@@ -13,5 +10,8 @@ public enum AirlineTable {
         this.tableName = tableName;
     }
 
+    public String getTableName() {
+        return this.tableName;
+    }
 }
 
