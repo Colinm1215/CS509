@@ -11,8 +11,7 @@ public class Flight
     private final Timestamp arrivalTime;
 
     public Flight(int id, String flightNumber, String departureAirport, String arrivalAirport,
-                  Timestamp departureTime, Timestamp arrivalTime, String airline,
-                  int availableSeats, BigDecimal price)
+                  Timestamp departureTime, Timestamp arrivalTime)
     {
         this.id = id;
         this.flightNumber = flightNumber;
