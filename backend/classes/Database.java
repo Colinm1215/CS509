@@ -58,8 +58,8 @@ public class Database implements DatabaseInterface {
 
             int paramIndex = 1;
             for (int i = 0; i < tables.size(); i++) {
-                pstmt.setObject(paramIndex++, params.get(0));
-                pstmt.setObject(paramIndex++, params.get(1));
+                pstmt.setObject(paramIndex++, "%" + params.get(0) + "%");
+                pstmt.setObject(paramIndex++, "%" + params.get(1) + "%");
                 pstmt.setObject(paramIndex++, params.get(2));
                 pstmt.setObject(paramIndex++, params.get(3));
             }
