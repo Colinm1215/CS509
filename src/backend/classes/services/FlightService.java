@@ -13,6 +13,8 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -42,10 +44,30 @@ public class FlightService {
     public Map<String, Object> searchFlights(String departureAirport, String arriveAirport, String startTimeStr,
                                              String endTimeStr, String sortBy, int page, int pageSize) throws SQLException {
         System.out.println(startTimeStr);
-        String normalizedStart = startTimeStr.concat(" 00:00:00");
-        Timestamp startTime = Timestamp.valueOf(normalizedStart);
-        String normalizedEnd = endTimeStr.concat(" 23:59:59");
-        Timestamp endTime = Timestamp.valueOf(normalizedEnd);
+        List<AirlineTable> tables = new ArrayList<>();
+        tables.add(AirlineTable.DELTAS);
+        tables.add(AirlineTable.SOUTHWESTS);
+
+        LocalDateTime startLocalDateTime;
+        LocalDateTime endLocalDateTime;
+
+        DateTimeFormatter isoFormatter = DateTimeFormatter.ISO_DATE_TIME;
+        if (startTimeStr.isEmpty()) {
+            FlightInterface earliestFlight = database.getFlightWithEarliestDeparture(tables);
+            startLocalDateTime = earliestFlight.getDepartureTime().toLocalDateTime();
+        } else {
+            startLocalDateTime = LocalDateTime.parse(startTimeStr, isoFormatter);
+        }
+
+        if (endTimeStr.isEmpty()) {
+            FlightInterface latestFlight = database.getFlightWithLatestDeparture(tables);
+            endLocalDateTime = latestFlight.getDepartureTime().toLocalDateTime();
+        } else {
+            endLocalDateTime = LocalDateTime.parse(endTimeStr, isoFormatter);
+        }
+
+        Timestamp startTime = Timestamp.valueOf(startLocalDateTime);
+        Timestamp endTime = Timestamp.valueOf(endLocalDateTime);
 
         List<Object> params = new ArrayList<>();
         params.add(departureAirport);
@@ -65,6 +87,9 @@ public class FlightService {
         List<FlightInterface> paginatedFlights = fromIndex < total ? flights.subList(fromIndex, toIndex) : new ArrayList<>();
 
         boolean hasMore = toIndex < total;
+        System.out.println("Total Flights: " + total);
+        System.out.println("Returning Flights: " + paginatedFlights.size());
+        System.out.println("Has More Pages: " + hasMore);
         Map<String, Object> response = new HashMap<>();
         response.put("flights", paginatedFlights);
         response.put("hasMore", hasMore);

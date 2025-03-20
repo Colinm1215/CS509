@@ -31,6 +31,7 @@ public class FlightController {
             @RequestParam(defaultValue = "5") int pageSize) {
         try {
             Map<String, Object> result = flightService.searchFlights(departureAirport, arriveAirport, startTime, endTime, sortBy, page, pageSize);
+            System.out.println("Received request: page=" + page + ", pageSize=" + pageSize);
             return ResponseEntity.ok(result);
         } catch (SQLException e) {
             return ResponseEntity.status(500).body(Map.of("error", "Database error: " + e.getMessage()));

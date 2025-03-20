@@ -18,4 +18,8 @@ public interface DatabaseInterface extends AutoCloseable {
 
         @Override
     void close() throws SQLException;
+
+    public FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException;
+
+    FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException;
 }
