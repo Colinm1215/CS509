@@ -78,7 +78,7 @@ function FlightSearch() {
 
     const handleNext = () => {
         setPage(prev => prev + 1);
-        refetch();  // Explicitly fetch only on page change
+        refetch();
     };
 
     const handlePrev = () => {

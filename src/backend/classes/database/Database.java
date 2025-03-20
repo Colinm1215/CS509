@@ -119,7 +119,6 @@ public class Database implements DatabaseInterface {
     @Override
     public FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException {
         StringBuilder sb = new StringBuilder();
-        // Build a UNION query to combine records from all provided tables
         for (int i = 0; i < tables.size(); i++) {
             sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
                     .append("FROM ").append(tables.get(i).getTableName());
@@ -127,7 +126,6 @@ public class Database implements DatabaseInterface {
                 sb.append(" UNION ALL ");
             }
         }
-        // Order by DepartDateTime ascending and limit to the first row
         sb.append(" ORDER BY DepartDateTime ASC LIMIT 1");
 
         try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
@@ -137,13 +135,12 @@ public class Database implements DatabaseInterface {
                 }
             }
         }
-        return null; // or throw exception if no flights exist
+        return null;
     }
 
     @Override
     public FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException {
         StringBuilder sb = new StringBuilder();
-        // Build a UNION query to combine records from all provided tables
         for (int i = 0; i < tables.size(); i++) {
             sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
                     .append("FROM ").append(tables.get(i).getTableName());
@@ -151,7 +148,6 @@ public class Database implements DatabaseInterface {
                 sb.append(" UNION ALL ");
             }
         }
-        // Order by DepartDateTime descending and limit to the first row
         sb.append(" ORDER BY DepartDateTime DESC LIMIT 1");
 
         try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
@@ -161,6 +157,6 @@ public class Database implements DatabaseInterface {
                 }
             }
         }
-        return null; // or throw exception if no flights exist
+        return null;
     }
 }
