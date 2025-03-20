@@ -1,8 +1,7 @@
-package backend.classes;
+package backend.classes.records;
 
 import backend.interfaces.FlightInterface;
 
-import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 

@@ -1,5 +1,6 @@
-package backend.classes;
+package backend.classes.database;
 
+import backend.classes.records.Flight;
 import backend.interfaces.DatabaseInterface;
 import backend.interfaces.FlightInterface;
 import enums.AirlineTable;
@@ -52,14 +53,15 @@ public class Database implements DatabaseInterface {
                 sb.append(" UNION ");
             }
         }
+
         sb.append(orderByClause);
         ArrayList<FlightInterface> flights = new ArrayList<>();
         try (PreparedStatement pstmt = connection.prepareStatement(sb.toString(), Statement.RETURN_GENERATED_KEYS)) {
 
             int paramIndex = 1;
             for (int i = 0; i < tables.size(); i++) {
-                pstmt.setObject(paramIndex++, "%" + params.get(0) + "%");
-                pstmt.setObject(paramIndex++, "%" + params.get(1) + "%");
+                pstmt.setObject(paramIndex++, params.get(0) == "" ? "%" : "%" + params.get(0) + "%");
+                pstmt.setObject(paramIndex++, params.get(1) == "" ? "%" : "%" + params.get(1) + "%");
                 pstmt.setObject(paramIndex++, params.get(2));
                 pstmt.setObject(paramIndex++, params.get(3));
             }
@@ -69,6 +71,8 @@ public class Database implements DatabaseInterface {
                     flights.add(new Flight(rs));
                 }
             }
+
+            System.out.println("Num of flights : " + flights.size());
 
             return flights;
         }
@@ -110,5 +114,49 @@ public class Database implements DatabaseInterface {
         if (connection != null && !connection.isClosed()) {
             connection.close();
         }
+    }
+
+    @Override
+    public FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tables.size(); i++) {
+            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
+                    .append("FROM ").append(tables.get(i).getTableName());
+            if (i < tables.size() - 1) {
+                sb.append(" UNION ALL ");
+            }
+        }
+        sb.append(" ORDER BY DepartDateTime ASC LIMIT 1");
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Flight(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tables.size(); i++) {
+            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
+                    .append("FROM ").append(tables.get(i).getTableName());
+            if (i < tables.size() - 1) {
+                sb.append(" UNION ALL ");
+            }
+        }
+        sb.append(" ORDER BY DepartDateTime DESC LIMIT 1");
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Flight(rs);
+                }
+            }
+        }
+        return null;
     }
 }
