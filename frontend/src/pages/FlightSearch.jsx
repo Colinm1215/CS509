@@ -30,6 +30,11 @@ export default function FlightSearch() {
     const [departureAirport, setDepartureAirport] = useState('');
     const [arriveAirport, setArriveAirport] = useState('');
     const [date, setDate] = useState(null);
+    const [oneWay, setOneWay] = useState(true);
+    const [returnDate, setReturnDate] = useState(null);
+    const [maxStops, setMaxStops] = useState('');
+    const [airline, setAirline] = useState('');
+    const [cabinClass, setCabinClass] = useState('');
     const [sortBy, setSortBy] = useState('traveltime');
 
     const [searchParams, setSearchParams] = useState({
@@ -86,9 +91,10 @@ export default function FlightSearch() {
 
                 <form
                     onSubmit={handleSearch}
-                    className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row md:items-end gap-4 mb-8"
+                    className="bg-white rounded-lg shadow-md p-6 flex flex-wrap items-end gap-4 mb-8"
                 >
-                    <div className="flex flex-col w-full md:w-1/4">
+                    {/* Departure Airport */}
+                    <div className="flex flex-col w-full md:w-1/5">
                         <label className="font-semibold mb-1 text-gray-700">Departure Airport</label>
                         <input
                             type="text"
@@ -99,7 +105,8 @@ export default function FlightSearch() {
                         />
                     </div>
 
-                    <div className="flex flex-col w-full md:w-1/4">
+                    {/* Arrival Airport */}
+                    <div className="flex flex-col w-full md:w-1/5">
                         <label className="font-semibold mb-1 text-gray-700">Arrival Airport</label>
                         <input
                             type="text"
@@ -110,7 +117,14 @@ export default function FlightSearch() {
                         />
                     </div>
 
-                    <div className="relative w-full md:w-1/4">
+                    {/* Round-trip Toggle */}
+                    <div className="flex items-center w-full md:w-1/12 p-2 border border-gray-300 rounded-md bg-gray-50">
+                        <input type="checkbox" checked={!oneWay} onChange={() => setOneWay((prev) => !prev)} id="roundTripToggle" className="mr-2" />
+                        <label htmlFor="roundTripToggle" className="font-semibold text-gray-700">Round-trip</label>
+                    </div>
+
+                    {/* Departure Date */}
+                    <div className="relative w-full md:w-1/6">
                         <label className="font-semibold mb-1 text-gray-700">Departure Date</label>
                         <div className="relative">
                             <ReactDatePicker
@@ -126,7 +140,69 @@ export default function FlightSearch() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col w-full md:w-1/5">
+                    {/* Return Date */}
+                    <div className="relative w-full md:w-1/6">
+                        <label className="font-semibold mb-1 text-gray-700">Return Date</label>
+                        <div className="relative">
+                            <ReactDatePicker
+                                selected={returnDate}
+                                onChange={(d) => setReturnDate(d)}
+                                placeholderText="Select return date"
+                                disabled={oneWay}
+                                className={`border ${oneWay ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'} rounded-md px-3 py-2 pl-10 focus:outline-none text-gray-800 w-full`}
+                                showMonthYearDropdown
+                            />
+                            <CalendarIcon
+                                className="absolute right-3 top-1/2 h-5 w-5 text-gray-400 -translate-y-1/2 pointer-events-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Max Stops Filter */}
+                    <div className="flex flex-col w-full md:w-1/12">
+                        <label className="font-semibold mb-1 text-gray-700">Max Stops</label>
+                        <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g., 1"
+                            value={maxStops}
+                            onChange={(e) => setMaxStops(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none text-gray-800"
+                        />
+                    </div>
+
+                    {/* Airline Filter */}
+                    <div className="flex flex-col w-full md:w-1/12">
+                        <label className="font-semibold mb-1 text-gray-700">Airline</label>
+                        <select
+                            value={airline}
+                            onChange={(e) => setAirline(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none text-gray-800"
+                        >
+                            <option value="">Any</option>
+                            <option value="AA">American Airlines</option>
+                            <option value="DL">Delta</option>
+                            <option value="UA">United</option>
+                        </select>
+                    </div>
+
+                    {/* Cabin Class Filter */}
+                    <div className="flex flex-col w-full md:w-1/12">
+                        <label className="font-semibold mb-1 text-gray-700">Class</label>
+                        <select
+                            value={cabinClass}
+                            onChange={(e) => setCabinClass(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none text-gray-800"
+                        >
+                            <option value="">Any</option>
+                            <option value="economy">Economy</option>
+                            <option value="first">First</option>
+                            <option value="business">Business</option>
+                        </select>
+                    </div>
+
+                    {/* Sort By */}
+                    <div className="flex flex-col w-full md:w-1/9">
                         <label className="font-semibold mb-1 text-gray-700">Sort By</label>
                         <select
                             value={sortBy}
@@ -139,12 +215,12 @@ export default function FlightSearch() {
                         </select>
                     </div>
 
-                    <button
-                        type="submit"
-                        className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors md:mb-0"
-                    >
-                        Search
-                    </button>
+                    {/* Search Button */}
+                    <div className="w-full md:w-1/12 flex justify-end ml-auto px-17 py-1">
+                        <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                            Search
+                        </button>
+                    </div>
                 </form>
 
                 <div>
