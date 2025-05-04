@@ -11,7 +11,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/flights")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class FlightController {
     private final FlightService flightService;
 
