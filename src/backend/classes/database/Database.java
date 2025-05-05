@@ -38,30 +38,59 @@ public class Database implements DatabaseInterface {
     }
 
 
-    public ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
+    public ArrayList<FlightInterface> selectFlights(
+            List<AirlineTable> tables,
+            String sortBy,
+            List<Object> params
+    ) throws SQLException {
+
         StringBuilder sb = new StringBuilder();
         String orderByClause = switch (sortBy.toLowerCase()) {
-            case "arrivedatetime" -> "ORDER BY ArriveDateTime ASC";
-            case "traveltime" -> "ORDER BY TIMESTAMPDIFF(MINUTE, DepartDateTime, ArriveDateTime) ASC";
-            default -> "ORDER BY DepartDateTime ASC";
+            case "arrivedatetime" ->
+                    " ORDER BY ArriveDateTime ASC";
+            case "traveltime" ->
+                    " ORDER BY TIMESTAMPDIFF(MINUTE, DepartDateTime, ArriveDateTime) ASC";
+            default ->
+                    " ORDER BY DepartDateTime ASC";
         };
 
         for (int i = 0; i < tables.size(); i++) {
-            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ").append("FROM ").append(tables.get(i).getTableName()).append(" WHERE ").append("DepartAirport LIKE ? ").append("AND ArriveAirport LIKE ? ").append("AND DepartDateTime BETWEEN ? AND ?");
-
+            String tableName = tables.get(i).getTableName();
+            sb.append("SELECT ")
+                    .append("id, ")
+                    .append("DepartDateTime, ")
+                    .append("ArriveDateTime, ")
+                    .append("DepartAirport, ")
+                    .append("ArriveAirport, ")
+                    .append("FlightNumber, ")
+                    .append("'").append(tableName).append("' AS airline ")
+                    .append("FROM ").append(tableName).append(" ")
+                    .append("WHERE DepartAirport LIKE ? ")
+                    .append("AND ArriveAirport LIKE ? ")
+                    .append("AND DepartDateTime BETWEEN ? AND ?");
             if (i < tables.size() - 1) {
                 sb.append(" UNION ");
             }
         }
 
         sb.append(orderByClause);
+
         ArrayList<FlightInterface> flights = new ArrayList<>();
-        try (PreparedStatement pstmt = connection.prepareStatement(sb.toString(), Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                sb.toString(),
+                Statement.RETURN_GENERATED_KEYS
+        )) {
 
             int paramIndex = 1;
             for (int i = 0; i < tables.size(); i++) {
-                pstmt.setObject(paramIndex++, params.get(0) == "" ? "%" : "%" + params.get(0) + "%");
-                pstmt.setObject(paramIndex++, params.get(1) == "" ? "%" : "%" + params.get(1) + "%");
+                pstmt.setObject(
+                        paramIndex++,
+                        "".equals(params.get(0)) ? "%" : "%" + params.get(0) + "%"
+                );
+                pstmt.setObject(
+                        paramIndex++,
+                        "".equals(params.get(1)) ? "%" : "%" + params.get(1) + "%"
+                );
                 pstmt.setObject(paramIndex++, params.get(2));
                 pstmt.setObject(paramIndex++, params.get(3));
             }
@@ -73,10 +102,10 @@ public class Database implements DatabaseInterface {
             }
 
             System.out.println("Num of flights : " + flights.size());
-
             return flights;
         }
     }
+
 
     public ArrayList<Integer> updateTables(List<AirlineTable> tables, List<Object> params) throws SQLException {
         ArrayList<Integer> ids = new ArrayList<>();
@@ -120,8 +149,11 @@ public class Database implements DatabaseInterface {
     public FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < tables.size(); i++) {
-            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
-                    .append("FROM ").append(tables.get(i).getTableName());
+            String tableName = tables.get(i).getTableName();
+            sb.append("SELECT ")
+                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, ")
+                    .append("'").append(tableName).append("' AS airline ")
+                    .append("FROM ").append(tableName);
             if (i < tables.size() - 1) {
                 sb.append(" UNION ALL ");
             }
@@ -138,12 +170,16 @@ public class Database implements DatabaseInterface {
         return null;
     }
 
+
     @Override
     public FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < tables.size(); i++) {
-            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
-                    .append("FROM ").append(tables.get(i).getTableName());
+            String tableName = tables.get(i).getTableName();
+            sb.append("SELECT ")
+                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, ")
+                    .append("'").append(tableName).append("' AS airline ")
+                    .append("FROM ").append(tableName);
             if (i < tables.size() - 1) {
                 sb.append(" UNION ALL ");
             }
@@ -152,6 +188,41 @@ public class Database implements DatabaseInterface {
 
         try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
             try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Flight(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+
+    public FlightInterface selectFlightById(List<AirlineTable> tables, int id) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tables.size(); i++) {
+            String tableName = tables.get(i).getTableName();
+            sb.append("SELECT ")
+                    .append("id, ")
+                    .append("DepartDateTime, ")
+                    .append("ArriveDateTime, ")
+                    .append("DepartAirport, ")
+                    .append("ArriveAirport, ")
+                    .append("FlightNumber, ")
+                    .append("'").append(tableName).append("' AS airline ")
+                    .append("FROM ").append(tableName)
+                    .append(" WHERE id = ?");
+            if (i < tables.size() - 1) {
+                sb.append(" UNION ALL ");
+            }
+        }
+        sb.append(" LIMIT 1");
+
+        try (PreparedStatement stmt = connection.prepareStatement(sb.toString())) {
+            for (int idx = 1; idx <= tables.size(); idx++) {
+                stmt.setInt(idx, id);
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return new Flight(rs);
                 }
