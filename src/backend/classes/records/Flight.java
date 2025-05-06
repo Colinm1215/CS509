@@ -12,16 +12,16 @@ public class Flight implements FlightInterface {
     private final String arrivalAirport;
     private final Timestamp departureTime;
     private final Timestamp arrivalTime;
-    private int seatsFree;
+    private final String airline;
 
-    public Flight(int id, String flightNumber, String departureAirport, String arrivalAirport, Timestamp departureTime, Timestamp arrivalTime) {
+    public Flight(int id, String flightNumber, String departureAirport, String arrivalAirport, Timestamp departureTime, Timestamp arrivalTime, String airline) {
         this.id = id;
         this.flightNumber = flightNumber;
         this.departureAirport = departureAirport;
         this.arrivalAirport = arrivalAirport;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
-        this.seatsFree = 100;
+        this.airline = airline;
     }
 
     public Flight(ResultSet rs) {
@@ -32,7 +32,7 @@ public class Flight implements FlightInterface {
             this.arrivalAirport = rs.getString("ArriveAirport");
             this.departureTime = rs.getTimestamp("DepartDateTime");
             this.arrivalTime = rs.getTimestamp("ArriveDateTime");
-            this.seatsFree = 100;
+            this.airline          = rs.getString("airline");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -62,13 +62,10 @@ public class Flight implements FlightInterface {
         return arrivalTime;
     }
 
-    public int getSeatsFree()
-    {
-        return seatsFree;
-    }
+    @Override
+    public String getAirline() {
+        return airline.substring(0, 1).toUpperCase() + airline.substring(1, airline.length() - 1);
 
-    public void reserved(){
-        seatsFree = seatsFree - 1;
     }
 
     @Override
@@ -79,7 +76,7 @@ public class Flight implements FlightInterface {
                 departureAirport='%s',
                 arrivalAirport='%s',
                 departureTime=%s,
-                arrivalTime=%s
-                seatsFree=%d}""".formatted(id, flightNumber, departureAirport, arrivalAirport, departureTime, arrivalTime, seatsFree);
+                arrivalTime=%s,
+                airline=%s}""".formatted(id, flightNumber, departureAirport, arrivalAirport, departureTime, arrivalTime, getAirline());
     }
 }
