@@ -9,59 +9,50 @@ import FlightDetails from './FlightDetails.jsx';
 
 const API_BASE_URL = 'http://localhost:8080/flights';
 
-function chunkConnections(arr, stops) {
-    const size = stops + 1;
-    const chunks = [];
-    for (let i = 0; i < arr.length; i += size) {
-        chunks.push(arr.slice(i, i + size));
+const getLastSegment = (flight) => {
+    let current = flight;
+    if (current.nextFlight == null) {
+        return null;
     }
-    return chunks;
-}
+    while (current.nextFlight) {
+        current = current.nextFlight;
+    }
+    return current;
+};
+
+const countSegments = (flight) => {
+    let current = flight;
+    let count = 0;
+    while (current.nextFlight) {
+        count++;
+        current = current.nextFlight;
+    }
+    return count;
+};
+
+const getFlightNumberList = (flight) => {
+    let idList = [];
+    let current = flight;
+    while (current.nextFlight) {
+        idList.push(current.flightNumber);
+        current = current.nextFlight;
+    }
+    idList.push(current.flightNumber);
+    return idList;
+};
+
+const getTripDuration = (departureTime, arrivalTime) => {
+    const dep = new Date(departureTime);
+    const arr = new Date(arrivalTime);
+    const diffMs = arr - dep;
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+};
 
 function FlightResults({ data, onSelect, label }) {
     const { flights = [], total = 0, hasMore = false } = data;
-
-    const getLastSegment = (flight) => {
-        let current = flight;
-        if (current.nextFlight == null) {
-            return null;
-        }
-        while (current.nextFlight) {
-            current = current.nextFlight;
-        }
-        return current;
-    };
-
-    const countSegments = (flight) => {
-        let current = flight;
-        let count = 0;
-        while (current.nextFlight) {
-            count++;
-            current = current.nextFlight;
-        }
-        return count;
-    };
-
-    const getFlightNumberList = (flight) => {
-        let idList = [];
-        let current = flight;
-        while (current.nextFlight) {
-            idList.push(current.flightNumber);
-            current = current.nextFlight;
-        }
-        idList.push(current.flightNumber);
-        return idList;
-    };
-
-    const getTripDuration = (departureTime, arrivalTime) => {
-        const dep = new Date(departureTime);
-        const arr = new Date(arrivalTime);
-        const diffMs = arr - dep;
-        const totalMinutes = Math.floor(diffMs / 60000);
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        return `${hours}h ${minutes}m`;
-    };
 
     return (
         <div>
@@ -145,16 +136,246 @@ function FlightResults({ data, onSelect, label }) {
     );
 }
 
-function ReturnResults({ data, onSelect }) {
-    const [outbound, inbound] = data;
+function ReturnResults({ data, onSelect, label }) {
+    const { flights = [], total = 0, hasMore = false } = data;
+
     return (
-        <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-md">
-                <FlightResults data={outbound} onSelect={onSelect} label="Outbound" />
-            </div>
-            <div className="bg-gray-50 p-4 rounded-md">
-                <FlightResults data={inbound} onSelect={onSelect} label="Return" />
-            </div>
+        <div>
+            {label && <h2 className="text-lg font-semibold mb-2">{label}</h2>}
+            {flights.length ? (
+
+                <ul className="space-y-4 mb-6">
+                    <AnimatePresence>
+                        {flights.map((flight, idx) => {
+                            const lastTo = getLastSegment(flight);
+                            const numListTo = getFlightNumberList(flight);
+                            const returnFlight = flight.returnTrip;
+                            if (returnFlight == null) {
+                                return (
+                                    <FlightResults
+                                        data={data}
+                                        onSelect={onSelect}
+                                    />
+                                );
+                            }
+                            let durationTo;
+                            if (lastTo == null) durationTo = getTripDuration(flight.departureTime, flight.arrivalTime);
+                            else durationTo = getTripDuration(flight.departureTime, lastTo.arrivalTime);
+
+                            let durationFrom;
+                            const lastFrom = getLastSegment(returnFlight);
+                            if (lastFrom == null) durationFrom = getTripDuration(returnFlight.departureTime, returnFlight.arrivalTime);
+                            else durationFrom = getTripDuration(returnFlight.departureTime, lastFrom.arrivalTime);
+                            const numListFrom = getFlightNumberList(returnFlight);
+                            if (lastTo == null) {
+                                if (lastFrom == null) {
+                                    return (
+                                        <motion.li
+                                            key={`${flight.id}-${idx}`}
+                                            onClick={() => {
+                                                onSelect(flight.id)
+                                            }}
+                                            initial={{opacity: 0, y: 10}}
+                                            animate={{opacity: 1, y: 0}}
+                                            exit={{opacity: 0, y: -10}}
+                                            transition={{duration: 0.3}}
+                                            style={{cursor: 'pointer'}}
+                                            className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">{flight.flightNumber}</h3>
+                                                        <p className="text-gray-600">
+                                                            {flight.departureAirport} → {flight.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(flight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(flight.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationTo}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">{returnFlight.flightNumber}</h3>
+                                                        <p className="text-gray-600">
+                                                            {returnFlight.departureAirport} → {returnFlight.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(returnFlight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(returnFlight.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationFrom}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.li>
+                                    );
+                                } else {
+                                    return (
+                                        <motion.li
+                                            key={`${flight.id}-${idx}`}
+                                            onClick={() => {
+                                                onSelect(flight.id)
+                                            }}
+                                            initial={{opacity: 0, y: 10}}
+                                            animate={{opacity: 1, y: 0}}
+                                            exit={{opacity: 0, y: -10}}
+                                            transition={{duration: 0.3}}
+                                            style={{cursor: 'pointer'}}
+                                            className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">{flight.flightNumber}</h3>
+                                                        <p className="text-gray-600">
+                                                            {flight.departureAirport} → {flight.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(flight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(flight.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationTo}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">
+                                                            {numListFrom.length > 1
+                                                                ? `Connecting Flights : ${numListFrom.join(' → ')}`
+                                                                : returnFlight.flightNumber
+                                                            }
+                                                        </h3>
+                                                        <p className="text-gray-600">
+                                                            {returnFlight.departureAirport} → {lastFrom.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(returnFlight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(lastFrom.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationFrom} |
+                                                            Stops: {countSegments(returnFlight)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.li>
+                                    );
+                                }
+                            } else {
+                                if (lastFrom == null) {
+                                    return (
+                                        <motion.li
+                                            key={`${flight.id}-${idx}`}
+                                            onClick={() => {
+                                                onSelect(flight.id)
+                                            }}
+                                            initial={{opacity: 0, y: 10}}
+                                            animate={{opacity: 1, y: 0}}
+                                            exit={{opacity: 0, y: -10}}
+                                            transition={{duration: 0.3}}
+                                            style={{cursor: 'pointer'}}
+                                            className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">
+                                                            {numListTo.length > 1
+                                                                ? `Connecting Flights : ${numListTo.join(' → ')}`
+                                                                : flight.flightNumber
+                                                            }
+                                                        </h3>
+                                                        <p className="text-gray-600">
+                                                            {flight.departureAirport} → {lastTo.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(flight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(lastTo.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationTo} |
+                                                            Stops: {countSegments(flight)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">{returnFlight.flightNumber}</h3>
+                                                        <p className="text-gray-600">
+                                                            {returnFlight.departureAirport} → {returnFlight.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(returnFlight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(returnFlight.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationFrom}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.li>
+                                    );
+                                } else {
+                                    return (
+                                        <motion.li
+                                            key={`${flight.id}-${idx}`}
+                                            onClick={() => {
+                                                onSelect(flight.id)
+                                            }}
+                                            initial={{opacity: 0, y: 10}}
+                                            animate={{opacity: 1, y: 0}}
+                                            exit={{opacity: 0, y: -10}}
+                                            transition={{duration: 0.3}}
+                                            style={{cursor: 'pointer'}}
+                                            className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">
+                                                            {numListTo.length > 1
+                                                                ? `Connecting Flights : ${numListTo.join(' → ')}`
+                                                                : flight.flightNumber
+                                                            }
+                                                        </h3>
+                                                        <p className="text-gray-600">
+                                                            {flight.departureAirport} → {lastTo.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(flight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(lastTo.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationTo} |
+                                                            Stops: {countSegments(flight)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800">
+                                                            {numListFrom.length > 1
+                                                                ? `Connecting Flights : ${numListFrom.join(' → ')}`
+                                                                : flight.flightNumber
+                                                            }
+                                                        </h3>
+                                                        <p className="text-gray-600">
+                                                            {returnFlight.departureAirport} → {returnFlight.arrivalAirport}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Depart: {new Date(returnFlight.departureTime).toLocaleString()} |
+                                                            Arrive: {new Date(lastFrom.arrivalTime).toLocaleString()} |
+                                                            Duration: {durationFrom} |
+                                                            Stops: {countSegments(returnFlight)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.li>
+                                    );
+                                }
+                            }
+                        })}
+                    </AnimatePresence>
+                </ul>
+            ) : <></>}
         </div>
     );
 }
@@ -386,7 +607,7 @@ export default function FlightSearch() {
                 <div>
                     {error && <p className="text-red-500">{error.message}</p>}
 
-                    {data && data.flights?.length > 0 ? (
+                    {data ? (
                         oneWay ? (
                             <FlightResults
                                 data={data}
@@ -394,10 +615,7 @@ export default function FlightSearch() {
                             />
                         ) : (
                             <ReturnResults
-                                data={[
-                                    { direct: data.outbound, connectionsFlat: [] },
-                                    { direct: data.returns,  connectionsFlat: [] }
-                                ]}
+                                data={data}
                                 onSelect={setSelectedFlightId}
                             />
                         )

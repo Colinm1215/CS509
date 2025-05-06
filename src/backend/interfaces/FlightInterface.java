@@ -13,4 +13,5 @@ public interface FlightInterface {
     int getSeatsFree();
     void reserved();
     FlightInterface getNextFlight();
+    FlightInterface getReturnTrip();
 }

@@ -92,36 +92,22 @@ public class FlightService {
                 returnDateEndTime
         );
 
-        ArrayList<ArrayList<FlightInterface>> legs = database.selectRoundTrip(tables, sortBy, params);
+        List<FlightInterface> flights = database.selectRoundTrip(tables, sortBy, params);
 
-        List<FlightInterface> outbound = legs.get(0);
-        List<FlightInterface> returns  = legs.get(1);
+        int total = flights.size();
+        int fromIndex = (page - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        List<FlightInterface> paginatedFlights = fromIndex < total ? flights.subList(fromIndex, toIndex) : new ArrayList<>();
 
-        int totalOut    = outbound.size();
-        int fromOut     = (page - 1) * pageSize;
-        int toOut       = Math.min(fromOut + pageSize, totalOut);
-        List<FlightInterface> pageOut = fromOut < totalOut
-                ? outbound.subList(fromOut, toOut)
-                : List.of();
-        boolean moreOut = toOut < totalOut;
-
-        int totalRet    = returns.size();
-        int fromRet     = (page - 1) * pageSize;
-        int toRet       = Math.min(fromRet + pageSize, totalRet);
-        List<FlightInterface> pageRet = fromRet < totalRet
-                ? returns.subList(fromRet, toRet)
-                : List.of();
-        boolean moreRet = toRet < totalRet;
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("outbound",        pageOut);
-        resp.put("returns",         pageRet);
-        resp.put("hasMoreOutbound", moreOut);
-        resp.put("hasMoreReturn",   moreRet);
-        resp.put("totalOutbound",   totalOut);
-        resp.put("totalReturn",     totalRet);
-
-        return resp;
+        boolean hasMore = toIndex < total;
+        System.out.println("Total Flights: " + total);
+        System.out.println("Returning Flights: " + paginatedFlights.size());
+        System.out.println("Has More Pages: " + hasMore);
+        Map<String, Object> response = new HashMap<>();
+        response.put("flights", paginatedFlights);
+        response.put("hasMore", hasMore);
+        response.put("total", total);
+        return response;
     }
 
 

@@ -85,23 +85,69 @@ public class Database implements DatabaseInterface {
     }
 
     @Override
-    public ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
+    public ArrayList<FlightInterface> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
         List<Object> firstParams = new ArrayList<>();
         List<Object> secondParams = new ArrayList<>();
-        firstParams.add(params.get(0));
-        firstParams.add(params.get(1));
-        firstParams.add(params.get(2));
-        firstParams.add(params.get(3));
-        secondParams.add(params.get(1));
-        secondParams.add(params.get(0));
-        secondParams.add(params.get(4));
-        secondParams.add(params.get(5));
+
+        System.out.println("In round trip");
+        System.out.println("Params are " + params);
+        System.out.println("Tables are " + tables);
+        System.out.println("Sort by is " + sortBy);
+
+        // outbound
+        firstParams.add(params.get(0)); // depart
+        firstParams.add(params.get(1)); // arrive
+        firstParams.add(params.get(2)); // outbound window start
+        firstParams.add(params.get(3)); // outbound window end
+        firstParams.add(params.get(4)); // maxStops
+        firstParams.add(params.get(5)); // airlinePref
+
+        // return
+        secondParams.add(params.get(1)); // depart = original arrive
+        secondParams.add(params.get(0)); // arrive = original depart
+        secondParams.add(params.get(6)); // return window start
+        secondParams.add(params.get(7)); // return window end
+        secondParams.add(params.get(4)); // maxStops
+        secondParams.add(params.get(5)); // airlinePref
+
         ArrayList<FlightInterface> flightsTo = selectFlights(tables, sortBy, firstParams);
         ArrayList<FlightInterface> flightsReturned = selectFlights(tables, sortBy, secondParams);
-        ArrayList<ArrayList<FlightInterface>> itineraries = new ArrayList<>();
-        itineraries.add(flightsTo);
-        itineraries.add(flightsReturned);
-        return itineraries;
+
+        ArrayList<FlightInterface> roundTrips = new ArrayList<>();
+
+        int n = Math.min(flightsTo.size(), flightsReturned.size());
+        for (int i = 0; i < n; i++) {
+            FlightInterface inOrig = flightsReturned.get(i);
+            List<FlightInterface> inLegs = new ArrayList<>();
+            while (inOrig != null) {
+                inLegs.add(inOrig);
+                inOrig = inOrig.getNextFlight();
+            }
+            FlightInterface inHeadCopy = null;
+            for (int j = inLegs.size() - 1; j >= 0; j--) {
+                inHeadCopy = new Flight(inLegs.get(j), inHeadCopy);
+            }
+
+            FlightInterface outOrig = flightsTo.get(i);
+            List<FlightInterface> outLegs = new ArrayList<>();
+            while (outOrig != null) {
+                outLegs.add(outOrig);
+                outOrig = outOrig.getNextFlight();
+            }
+
+            FlightInterface chain = null;
+            for (int j = outLegs.size() - 1; j >= 0; j--) {
+                if (j == 0) {
+                    chain = new Flight(outLegs.get(0), chain, inHeadCopy);
+                } else {
+                    chain = new Flight(outLegs.get(j), chain);
+                }
+            }
+
+            roundTrips.add(chain);
+        }
+
+        return roundTrips;
     }
 
     private void dfsConnections(String target,
