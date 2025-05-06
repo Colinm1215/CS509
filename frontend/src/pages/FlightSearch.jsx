@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { CalendarIcon } from '@heroicons/react/24/outline';
-import FlightDetails from './FlightDetails.jsx';
 
 const API_BASE_URL = 'http://localhost:8080/flights';
 
@@ -37,7 +36,6 @@ export default function FlightSearch() {
     const [airline, setAirline] = useState('');
     const [cabinClass, setCabinClass] = useState('');
     const [sortBy, setSortBy] = useState('traveltime');
-    const [selectedFlightId, setSelectedFlightId] = useState(null);
 
     const [searchParams, setSearchParams] = useState({
         departureAirport: '',
@@ -236,18 +234,16 @@ export default function FlightSearch() {
                                     {data.flights.map((flight) => (
                                         <motion.li
                                             key={flight.id}
-                                            onClick={() => setSelectedFlightId(flight.id)}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
                                             transition={{ duration: 0.3 }}
-                                            style={{ cursor: 'pointer' }}
                                             className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
                                         >
                                             <div>
                                                 <h3 className="text-lg font-semibold text-gray-800">{flight.flightNumber}</h3>
                                                 <p className="text-gray-600">
-                                                    {flight.departureAirport} → {flight.arrivalAirport}cd
+                                                    {flight.departureAirport} → {flight.arrivalAirport}
                                                 </p>
                                                 <p className="text-sm text-gray-500">
                                                     Depart: {new Date(flight.departureTime).toLocaleString()} |
@@ -283,13 +279,6 @@ export default function FlightSearch() {
                                     Next
                                 </button>
                             </div>
-
-                            {selectedFlightId && (
-                                <FlightDetails
-                                    flightId={selectedFlightId}
-                                    onClose={() => setSelectedFlightId(null)}
-                                />
-                            )}
                         </>
                     ) : (
                         data && <p className="text-gray-600">No flights found. Try another search.</p>

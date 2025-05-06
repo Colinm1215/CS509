@@ -131,14 +131,4 @@ public class FlightService {
         List<Integer> deletedIds = database.updateTables(tables, params);
         return !deletedIds.isEmpty();
     }
-
-    // Select flight by id
-    public FlightInterface getFlightById(int id) throws SQLException {
-        List<AirlineTable> tables = List.of(AirlineTable.DELTAS, AirlineTable.SOUTHWESTS);
-        FlightInterface flight = database.selectFlightById(tables, id);
-        if (flight == null) {
-            throw new NoSuchElementException("Flight not found: " + id);
-        }
-        return flight;
-    }
 }
