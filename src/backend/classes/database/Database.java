@@ -7,8 +7,8 @@ import enums.AirlineTable;
 
 import java.sql.*;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 public class Database implements DatabaseInterface {
 
@@ -44,7 +44,8 @@ public class Database implements DatabaseInterface {
 
         for (int i = 0; i < tables.size(); i++)
         {
-            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
+            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, SeatsAvailable, '")
+                    .append(tables.get(i).getTableName()).append("' AS airline ")
                     .append("FROM ").append(tables.get(i).getTableName()).append(" ")
                     .append("WHERE DepartDateTime BETWEEN ? AND ? ")
                     .append("AND DepartDateTime < ArriveDateTime ");
@@ -101,6 +102,49 @@ public class Database implements DatabaseInterface {
         itineraries.add(flightsTo);
         itineraries.add(flightsReturned);
         return itineraries;
+    }
+
+    private void dfsConnections(String target,
+                                List<FlightInterface> path,
+                                List<List<FlightInterface>> results,
+                                Map<String, NavigableMap<LocalDateTime, List<FlightInterface>>> departuresByTime,
+                                int maxStops) {
+        FlightInterface last = path.get(path.size() - 1);
+        String lastCode = code(last.getArrivalAirport()).toUpperCase();
+        LocalDateTime arr = last.getArrivalTime().toLocalDateTime();
+
+        if (code(last.getArrivalAirport()).equals(target)) {
+            results.add(new ArrayList<>(path));
+            return;
+        }
+        if (path.size() > maxStops + 1) return;
+
+        LocalDateTime windowStart = arr.plusMinutes(30);
+        LocalDateTime windowEnd   = arr.plusMinutes(359);
+
+        NavigableMap<LocalDateTime, List<FlightInterface>> tm =
+                departuresByTime.getOrDefault(lastCode, new TreeMap<>());
+
+        for (var entry : tm.subMap(windowStart, true, windowEnd, true).entrySet()) {
+            for (FlightInterface next : entry.getValue()) {
+                if (path.contains(next)) continue;
+
+                path.add(next);
+                dfsConnections(target, path, results, departuresByTime, maxStops);
+                path.remove(path.size() - 1);
+            }
+        }
+    }
+
+    private String code(String airportWithParen) {
+        int p0 = airportWithParen.indexOf('(');
+        int p1 = airportWithParen.indexOf(')');
+        if (p0 >= 0 && p1 > p0) {
+            return airportWithParen.substring(p0 + 1, p1);
+        }
+        return airportWithParen.length() >= 3
+                ? airportWithParen.substring(airportWithParen.length() - 3)
+                : airportWithParen;
     }
 
     public ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
@@ -170,63 +214,59 @@ public class Database implements DatabaseInterface {
 
         System.out.println("Searching for connecting flights...");
         List<FlightInterface> allFlights = getAllFlightsFromTables(tables, params);
+
+        Map<String, NavigableMap<LocalDateTime, List<FlightInterface>>> departuresByTime = new HashMap<>();
+
+        for (FlightInterface f : allFlights) {
+            String depCode = code(f.getDepartureAirport()).toUpperCase();
+            LocalDateTime depTime = f.getDepartureTime().toLocalDateTime();
+
+            departuresByTime
+                    .computeIfAbsent(depCode, k -> new TreeMap<>())
+                    .computeIfAbsent(depTime,   k -> new ArrayList<>())
+                    .add(f);
+        }
+
+        Map<String, List<FlightInterface>> flightsFrom = new HashMap<>();
+        for (FlightInterface f : allFlights) {
+            String depCode = code(f.getDepartureAirport()).toUpperCase();
+            flightsFrom
+                    .computeIfAbsent(depCode, k -> new ArrayList<>())
+                    .add(f);
+        }
+
+        String origin = params.get(0).toString().toUpperCase();
+        String dest   = params.get(1).toString().toUpperCase();
+
+        System.out.println("origin key   : '" + origin + "'");
+        System.out.println("available keys: " + flightsFrom.keySet());
+
         ArrayList<FlightInterface> connecting = new ArrayList<>();
+        List<List<FlightInterface>> raw = new ArrayList<>();
 
-        for (FlightInterface first : allFlights) {
-            for (FlightInterface second : allFlights) {
-                if (first.getDepartureAirport().contains(params.get(0).toString().toUpperCase())
-                        && first.getArrivalAirport().equals(second.getDepartureAirport())
-                        && second.getArrivalAirport().contains(params.get(1).toString().toUpperCase()))
-                {
+        for (FlightInterface firstLeg : flightsFrom.getOrDefault(origin, List.of())) {
+            List<FlightInterface> path = new ArrayList<>();
+            path.add(firstLeg);
 
-                    long layover = Duration.between(
-                            first.getArrivalTime().toLocalDateTime(),
-                            second.getDepartureTime().toLocalDateTime()
-                    ).toMinutes();
-
-                    if (layover >= 30 && layover < 360 && first.getArrivalTime().before(second.getDepartureTime()) && !first.equals(second)) {
-                        connecting.add(first);
-                        connecting.add(second);
-                    }
-                }
-            }
+            dfsConnections(dest, path, raw, departuresByTime, maxStops);
         }
+
+        System.out.println("Found " + raw.size() + " possible connections.");
+        System.out.println("raw is " + raw);
+
+        for (List<FlightInterface> legs : raw) {
+            FlightInterface composite = legs.get(0);
+            for (int i = 1; i < legs.size(); i++) {
+                composite = new Flight(composite, legs.get(i));
+            }
+            connecting.add(composite);
+        }
+
+        System.out.println("Found " + connecting.size() + " connecting flights.");
+        System.out.println("Connecting flights are " + connecting);
 
         if (!connecting.isEmpty()) {
-            System.out.println("Found 1-stop flights: " + connecting.size() / 2 + " pairs");
-            return connecting;
-        }
-
-        if (maxStops < 2) return connecting;
-
-        System.out.println("Searching for 2-stop flights...");
-        for (FlightInterface first : allFlights) {
-            if (!first.getDepartureAirport().contains(params.get(0).toString().toUpperCase())) continue;
-
-            for (FlightInterface second : allFlights) {
-                if (!first.getArrivalAirport().equals(second.getDepartureAirport())) continue;
-
-                for (FlightInterface third : allFlights) {
-                    if (!second.getArrivalAirport().equals(third.getDepartureAirport())) continue;
-                    if (!third.getArrivalAirport().contains(params.get(1).toString().toUpperCase())) continue;
-
-                    long layover1 = Duration.between(first.getArrivalTime().toLocalDateTime(), second.getDepartureTime().toLocalDateTime()).toMinutes();
-                    long layover2 = Duration.between(second.getArrivalTime().toLocalDateTime(), third.getDepartureTime().toLocalDateTime()).toMinutes();
-
-                    if (layover1 >= 30 && layover2 >= 30 && layover2 < 360 && layover1 < 360 &&
-                            first.getArrivalTime().before(second.getDepartureTime()) &&
-                            second.getArrivalTime().before(third.getDepartureTime()) &&
-                            !first.equals(second) && !second.equals(third) && !first.equals(third)) {
-                        connecting.add(first);
-                        connecting.add(second);
-                        connecting.add(third);
-                    }
-                }
-            }
-        }
-
-        if (!connecting.isEmpty()) {
-            System.out.println("Found 2-stop flights: " + connecting.size() / 3 + " sets");
+            System.out.println("Found connecting flights: " + connecting.size());
             return connecting;
         }
 

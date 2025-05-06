@@ -14,6 +14,7 @@ public class Flight implements FlightInterface {
     private final Timestamp arrivalTime;
     private final String airline;
     private int seatsFree;
+    private FlightInterface nextFlight;
 
     public Flight(int id, String flightNumber, String departureAirport, String arrivalAirport, Timestamp departureTime, Timestamp arrivalTime, String airline) {
         this.id = id;
@@ -24,6 +25,7 @@ public class Flight implements FlightInterface {
         this.arrivalTime = arrivalTime;
         this.airline = airline;
         this.seatsFree = 100;
+        this.nextFlight = null;
     }
 
     public Flight(ResultSet rs) {
@@ -35,7 +37,24 @@ public class Flight implements FlightInterface {
             this.departureTime = rs.getTimestamp("DepartDateTime");
             this.arrivalTime = rs.getTimestamp("ArriveDateTime");
             this.airline          = rs.getString("airline");
-            this.seatsFree       = 100;
+            this.seatsFree       = rs.getInt("SeatsAvailable");
+            this.nextFlight = null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Flight(FlightInterface flight, FlightInterface nextFlight) {
+        try {
+            this.id = flight.getId();
+            this.flightNumber = flight.getFlightNumber();
+            this.departureAirport = flight.getDepartureAirport();
+            this.arrivalAirport = flight.getArrivalAirport();
+            this.departureTime = flight.getDepartureTime();
+            this.arrivalTime = flight.getArrivalTime();
+            this.airline          = flight.getAirline();
+            this.seatsFree       = flight.getSeatsFree();
+            this.nextFlight = nextFlight;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -85,6 +104,11 @@ public class Flight implements FlightInterface {
     @Override
     public void reserved() {
         this.seatsFree = this.seatsFree - 1;
+    }
+
+    @Override
+    public FlightInterface getNextFlight() {
+        return this.nextFlight;
     }
 
     @Override
