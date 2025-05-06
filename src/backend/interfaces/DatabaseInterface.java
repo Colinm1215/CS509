@@ -24,4 +24,7 @@ public interface DatabaseInterface extends AutoCloseable {
     FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException;
 
     FlightInterface selectFlightById(List<AirlineTable> tables, int id) throws SQLException;
+
+    ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException;
+
 }

@@ -10,4 +10,6 @@ public interface FlightInterface {
     Timestamp getDepartureTime();
     Timestamp getArrivalTime();
     String getAirline();
+    int getSeatsFree();
+    void reserved();
 }
