@@ -9,4 +9,5 @@ public interface FlightInterface {
     String getArrivalAirport();
     Timestamp getDepartureTime();
     Timestamp getArrivalTime();
+    String getAirline();
 }
