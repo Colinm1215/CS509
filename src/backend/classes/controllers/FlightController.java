@@ -2,14 +2,12 @@ package backend.classes.controllers;
 
 import backend.classes.records.Flight;
 import backend.classes.services.FlightService;
-import backend.interfaces.FlightInterface;
 import enums.AirlineTable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/flights")
@@ -77,19 +75,6 @@ public class FlightController {
             } else {
                 return ResponseEntity.status(404).body(Map.of("error", "Flight not found"));
             }
-        } catch (SQLException e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Database error: " + e.getMessage()));
-        }
-    }
-
-    // Get flight by id
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getFlightById(@PathVariable int id) {
-        try {
-            FlightInterface flight = flightService.getFlightById(id);
-            return ResponseEntity.ok(flight);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (SQLException e) {
             return ResponseEntity.status(500).body(Map.of("error", "Database error: " + e.getMessage()));
         }
