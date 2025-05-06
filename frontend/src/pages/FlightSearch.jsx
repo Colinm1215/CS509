@@ -11,13 +11,19 @@ const API_BASE_URL = 'http://localhost:8080/flights';
 
 const fetchFlights = async ({ queryKey }) => {
     const [_, params] = queryKey;
-    const { departureAirport, arriveAirport, startTime, endTime, sortBy, page, pageSize } = params;
+    const { departureAirport, arriveAirport, startTime, endTime, oneWay, returnDate, maxStops, airline, sortBy, page, pageSize } = params;
 
     const qs = new URLSearchParams();
     qs.append('departureAirport', departureAirport ?? '');
     qs.append('arriveAirport', arriveAirport ?? '');
     qs.append('startTime', startTime ?? '');
     qs.append('endTime', endTime ?? '');
+    qs.append('oneWay',        oneWay ? 'true' : 'false');
+    if (typeof maxStops === 'number') qs.append('maxStops', maxStops);
+    else qs.append('maxStops', 0);
+    qs.append('airline', airline ?? '');
+    qs.append('returnDateStart', returnDate ?? '');
+    qs.append('returnDateEnd', returnDate ?? '');
     qs.append('sortBy', sortBy);
     qs.append('page', page);
     qs.append('pageSize', pageSize);
@@ -44,6 +50,9 @@ export default function FlightSearch() {
         arriveAirport: '',
         startTime: '',
         endTime: '',
+        oneWay: 'true',
+        returnDate: '',
+        maxStops: 0,
         sortBy: 'traveltime',
         page: 1,
         pageSize: 5,
@@ -62,6 +71,10 @@ export default function FlightSearch() {
             arriveAirport,
             startTime: date ? date.toISOString() : '',
             endTime: date ? date.toISOString() : '',
+            oneWay,
+            returnDate: !oneWay && returnDate ? returnDate.toISOString() : '',
+            maxStops: maxStops ? Number(maxStops) : '',
+            airline,
             sortBy,
             page: 1,
             pageSize: 5,
@@ -247,7 +260,7 @@ export default function FlightSearch() {
                                             <div>
                                                 <h3 className="text-lg font-semibold text-gray-800">{flight.flightNumber}</h3>
                                                 <p className="text-gray-600">
-                                                    {flight.departureAirport} → {flight.arrivalAirport}cd
+                                                    {flight.departureAirport} → {flight.arriveAirport}cd
                                                 </p>
                                                 <p className="text-sm text-gray-500">
                                                     Depart: {new Date(flight.departureTime).toLocaleString()} |

@@ -28,12 +28,17 @@ export default function FlightDetails({ flightId, onClose }) {
         if (!window.confirm('Are you sure you want to reserve this flight?')) return;
         setReserving(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/reservations`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flightId: flight.id }),
-            });
-            if (!res.ok) throw new Error(`Failed to reserve: ${res.status}`);
+            const res = await fetch(
+                `${API_BASE_URL}/flights/${flight.id}/reserve`,
+                { method: 'POST' }
+            );
+            if (res.status === 409) {
+                alert('Sorry, no seats available on that flight.');
+                return;
+            }
+            if (!res.ok) {
+                throw new Error(`Failed to reserve: ${res.status}`);
+            }
             alert('Reservation confirmed!');
             onClose();
         } catch (err) {

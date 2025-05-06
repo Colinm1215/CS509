@@ -38,26 +38,6 @@ public class Database implements DatabaseInterface {
         return -1;
     }
 
-    @Override
-    public ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
-        List<Object> firstParams = new ArrayList<>();
-        List<Object> secondParams = new ArrayList<>();
-        firstParams.add(params.get(0));
-        firstParams.add(params.get(1));
-        firstParams.add(params.get(2));
-        firstParams.add(params.get(3));
-        secondParams.add(params.get(1));
-        secondParams.add(params.get(0));
-        secondParams.add(params.get(4));
-        secondParams.add(params.get(5));
-        ArrayList<FlightInterface> flightsTo = selectFlights(tables, sortBy, firstParams);
-        ArrayList<FlightInterface> flightsReturned = selectFlights(tables, sortBy, secondParams);
-        ArrayList<ArrayList<FlightInterface>> itineraries = new ArrayList<>();
-        itineraries.add(flightsTo);
-        itineraries.add(flightsReturned);
-        return itineraries;
-    }
-
     private List<FlightInterface> getAllFlightsFromTables(List<AirlineTable> tables, List<Object> params) throws SQLException
     {
         StringBuilder sb = new StringBuilder();
@@ -65,9 +45,9 @@ public class Database implements DatabaseInterface {
         for (int i = 0; i < tables.size(); i++)
         {
             sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber ")
-                    .append("FROM ").append(tables.get(i).getTableName())
-                    .append(" WHERE DepartDateTime BETWEEN ? AND ?")
-                    .append(" AND DepartDateTime < ArriveDateTime");
+                    .append("FROM ").append(tables.get(i).getTableName()).append(" ")
+                    .append("WHERE DepartDateTime BETWEEN ? AND ? ")
+                    .append("AND DepartDateTime < ArriveDateTime ");
 
             if (i < tables.size() - 1)
             {
@@ -103,7 +83,42 @@ public class Database implements DatabaseInterface {
         return flights;
     }
 
+    @Override
+    public ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
+        List<Object> firstParams = new ArrayList<>();
+        List<Object> secondParams = new ArrayList<>();
+        firstParams.add(params.get(0));
+        firstParams.add(params.get(1));
+        firstParams.add(params.get(2));
+        firstParams.add(params.get(3));
+        secondParams.add(params.get(1));
+        secondParams.add(params.get(0));
+        secondParams.add(params.get(4));
+        secondParams.add(params.get(5));
+        ArrayList<FlightInterface> flightsTo = selectFlights(tables, sortBy, firstParams);
+        ArrayList<FlightInterface> flightsReturned = selectFlights(tables, sortBy, secondParams);
+        ArrayList<ArrayList<FlightInterface>> itineraries = new ArrayList<>();
+        itineraries.add(flightsTo);
+        itineraries.add(flightsReturned);
+        return itineraries;
+    }
+
     public ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
+        System.out.println("In Database.java");
+        System.out.println("Params are " + params);
+        System.out.println("Tables are " + tables);
+        System.out.println("Sort by is " + sortBy);
+
+
+        int maxStops = (int) params.get(4);
+        String airlinePref = ((String) params.get(5)).toLowerCase();
+
+        List<AirlineTable> filteredTables = switch (airlinePref) {
+            case "southwests" -> List.of(AirlineTable.SOUTHWESTS);
+            case "deltas" -> List.of(AirlineTable.DELTAS);
+            default -> tables;
+        };
+
         StringBuilder sb = new StringBuilder();
         String orderByClause = switch (sortBy.toLowerCase()) {
             case "arrivedatetime" -> "ORDER BY ArriveDateTime ASC";
@@ -111,128 +126,111 @@ public class Database implements DatabaseInterface {
             default -> "ORDER BY DepartDateTime ASC";
         };
 
-        for (int i = 0; i < tables.size(); i++) {
-            String tableName = tables.get(i).getTableName();
-            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, '")
+        for (int i = 0; i < filteredTables.size(); i++) {
+            String tableName = filteredTables.get(i).getTableName();
+            sb.append("SELECT id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, SeatsAvailable, '")
                     .append(tableName).append("' AS airline ")
-                    .append("FROM ").append(tableName)
+                    .append(" FROM ").append(tableName)
                     .append(" WHERE DepartAirport LIKE ? ")
-                    .append("AND ArriveAirport LIKE ? ")
-                    .append("AND DepartDateTime BETWEEN ? AND ?")
-                    .append(" AND DepartDateTime < ArriveDateTime");
-            if (i < tables.size() - 1) {
+                    .append(" AND ArriveAirport LIKE ? ")
+                    .append(" AND DepartDateTime BETWEEN ? AND ? ")
+                    .append(" AND DepartDateTime < ArriveDateTime ");
+
+            if (i < filteredTables.size() - 1) {
                 sb.append(" UNION ");
             }
         }
-        sb.append(" ").append(orderByClause);
 
+        sb.append(" ").append(orderByClause);
         ArrayList<FlightInterface> flights = new ArrayList<>();
+
         try (PreparedStatement pstmt = connection.prepareStatement(sb.toString(), Statement.RETURN_GENERATED_KEYS)) {
             int paramIndex = 1;
-            for (int i = 0; i < tables.size(); i++) {
+            for (int i = 0; i < filteredTables.size(); i++) {
                 pstmt.setObject(paramIndex++, "".equals(params.get(0)) ? "%" : "%" + params.get(0) + "%");
                 pstmt.setObject(paramIndex++, "".equals(params.get(1)) ? "%" : "%" + params.get(1) + "%");
                 pstmt.setObject(paramIndex++, params.get(2));
                 pstmt.setObject(paramIndex++, params.get(3));
             }
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     flights.add(new Flight(rs));
                 }
             }
-            System.out.println("Found direct flights: " + flights.size());
         }
 
-        if (!flights.isEmpty())
-        {
+        if (!flights.isEmpty()) {
             System.out.println("Found direct flights: " + flights.size());
             return flights;
         }
 
-        System.out.println("No direct flights found. Searching for connecting flights...");
-        // Try to find connecting flights
+        System.out.println("No direct flights found.");
+        if (maxStops < 1) return flights;
+
+        System.out.println("Searching for connecting flights...");
         List<FlightInterface> allFlights = getAllFlightsFromTables(tables, params);
         ArrayList<FlightInterface> connecting = new ArrayList<>();
-        for (FlightInterface firstLeg : allFlights)
-        {
-            for (FlightInterface secondLeg : allFlights)
-            {
-                if (firstLeg.getDepartureAirport().contains((CharSequence) params.get(0)) && firstLeg.getArrivalAirport().equals(secondLeg.getDepartureAirport()) && secondLeg.getArrivalAirport().contains((CharSequence) params.get(1)))
+
+        for (FlightInterface first : allFlights) {
+            for (FlightInterface second : allFlights) {
+                if (first.getDepartureAirport().contains(params.get(0).toString().toUpperCase())
+                        && first.getArrivalAirport().equals(second.getDepartureAirport())
+                        && second.getArrivalAirport().contains(params.get(1).toString().toUpperCase()))
                 {
-                    long layoverMinutes = Duration.between(
-                            firstLeg.getArrivalTime().toLocalDateTime(),
-                            secondLeg.getDepartureTime().toLocalDateTime()
+
+                    long layover = Duration.between(
+                            first.getArrivalTime().toLocalDateTime(),
+                            second.getDepartureTime().toLocalDateTime()
                     ).toMinutes();
 
-                    if (layoverMinutes >= 30 &&
-                            firstLeg.getArrivalTime().before(secondLeg.getDepartureTime()) &&
-                            !firstLeg.equals(secondLeg))
-                    {
-                        connecting.add(firstLeg);
-                        connecting.add(secondLeg);
+                    if (layover >= 30 && layover < 360 && first.getArrivalTime().before(second.getDepartureTime()) && !first.equals(second)) {
+                        connecting.add(first);
+                        connecting.add(second);
                     }
                 }
             }
         }
 
-        if (!connecting.isEmpty())
-        {
-            System.out.println("Found connecting flights: " + connecting.size() / 2 + " pairs");
+        if (!connecting.isEmpty()) {
+            System.out.println("Found 1-stop flights: " + connecting.size() / 2 + " pairs");
             return connecting;
         }
 
-        System.out.println("No direct or single connection flights found. Searching for double connecting flights...");
-        for (FlightInterface firstLeg : allFlights)
-        {
-            if(!firstLeg.getDepartureAirport().contains((CharSequence) params.get(0)))
-            {
-                continue;
-            }
-            for (FlightInterface secondLeg : allFlights)
-            {
-                if(!firstLeg.getArrivalAirport().equals(secondLeg.getDepartureAirport())){
-                    continue;
-                }
-                for (FlightInterface thirdLeg : allFlights)
-                {
-                    if (!thirdLeg.getArrivalAirport().contains((CharSequence) params.get(1)) ||
-                            !secondLeg.getArrivalAirport().equals(thirdLeg.getDepartureAirport())
-                    )
-                    {
-                        continue;
-                    }
-                    {
-                        long layover1 = Duration.between(
-                                firstLeg.getArrivalTime().toLocalDateTime(),
-                                secondLeg.getDepartureTime().toLocalDateTime()
-                        ).toMinutes();
+        if (maxStops < 2) return connecting;
 
-                        long layover2 = Duration.between(
-                                secondLeg.getArrivalTime().toLocalDateTime(),
-                                thirdLeg.getDepartureTime().toLocalDateTime()
-                        ).toMinutes();
+        System.out.println("Searching for 2-stop flights...");
+        for (FlightInterface first : allFlights) {
+            if (!first.getDepartureAirport().contains(params.get(0).toString().toUpperCase())) continue;
 
-                        if (layover1 >= 30 &&
-                                layover2 >= 30 &&
-                                firstLeg.getArrivalTime().before(secondLeg.getDepartureTime()) &&
-                                secondLeg.getArrivalTime().before(thirdLeg.getDepartureTime()) &&
-                                !firstLeg.equals(secondLeg) &&
-                                !secondLeg.equals(thirdLeg) &&
-                                !firstLeg.equals(thirdLeg))
-                        {
-                            connecting.add(firstLeg);
-                            connecting.add(secondLeg);
-                            connecting.add(thirdLeg);
-                        }
+            for (FlightInterface second : allFlights) {
+                if (!first.getArrivalAirport().equals(second.getDepartureAirport())) continue;
+
+                for (FlightInterface third : allFlights) {
+                    if (!second.getArrivalAirport().equals(third.getDepartureAirport())) continue;
+                    if (!third.getArrivalAirport().contains(params.get(1).toString().toUpperCase())) continue;
+
+                    long layover1 = Duration.between(first.getArrivalTime().toLocalDateTime(), second.getDepartureTime().toLocalDateTime()).toMinutes();
+                    long layover2 = Duration.between(second.getArrivalTime().toLocalDateTime(), third.getDepartureTime().toLocalDateTime()).toMinutes();
+
+                    if (layover1 >= 30 && layover2 >= 30 && layover2 < 360 && layover1 < 360 &&
+                            first.getArrivalTime().before(second.getDepartureTime()) &&
+                            second.getArrivalTime().before(third.getDepartureTime()) &&
+                            !first.equals(second) && !second.equals(third) && !first.equals(third)) {
+                        connecting.add(first);
+                        connecting.add(second);
+                        connecting.add(third);
                     }
                 }
             }
         }
-        if (!connecting.isEmpty()){
-            System.out.println("Found triple connecting flights: " + connecting.size() / 3 + " sets");
+
+        if (!connecting.isEmpty()) {
+            System.out.println("Found 2-stop flights: " + connecting.size() / 3 + " sets");
             return connecting;
         }
-        System.out.println("No flight plans with <3 connections found");
+
+        System.out.println("No flight plans found with max " + maxStops + " stop(s).");
         return connecting;
     }
 
@@ -263,8 +261,56 @@ public class Database implements DatabaseInterface {
                     }
                 }
             }
+
+            String selectSql = "SELECT * FROM " + table.getTableName() + " WHERE id = ?";
+            try (PreparedStatement st = connection.prepareStatement(selectSql)) {
+                st.setObject(1, params.get(params.size() - 1));
+                try (ResultSet rs = st.executeQuery()) {
+                    if (rs.next()) {
+                        System.out.println("Updated Flight ID: " + rs.getInt("id"));
+                        System.out.println("DepartDateTime: " + rs.getTimestamp("DepartDateTime"));
+                        System.out.println("ArriveDateTime: " + rs.getTimestamp("ArriveDateTime"));
+                        System.out.println("DepartAirport: " + rs.getString("DepartAirport"));
+                        System.out.println("ArriveAirport: " + rs.getString("ArriveAirport"));
+                        System.out.println("FlightNumber: " + rs.getString("FlightNumber"));
+                        System.out.println("SeatsAvailable: " + rs.getInt("SeatsAvailable"));
+                    }
+                }
+            }
         }
+
+
         return ids;
+    }
+
+    public boolean decreaseSeatsAvailable(AirlineTable table, int flightId) throws SQLException
+    {
+        System.out.println("reached decreaseSeatsAvailable in Database.java");
+        ArrayList<Integer> ids = new ArrayList<>();
+        System.out.println(table.getTableName());
+
+        String sql = "UPDATE " + table.getTableName() +
+                " SET SeatsAvailable = SeatsAvailable - 1 " +
+                "WHERE id = ? AND SeatsAvailable > 0";
+
+        System.out.println("SQL: " + sql);
+        try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS))
+        {
+            stmt.setInt(1, flightId);  // Set the flight ID in the prepared statement
+            System.out.println("stmt: " + stmt);
+            int updated = stmt.executeUpdate();  // Execute the update statement
+            System.out.println("Updated: " + updated);
+
+            if (updated > 0)  // If the update was successful, proceed
+            {
+                return true;
+            }
+            else  // If no rows were updated (no seats available or invalid flight ID)
+            {
+                System.out.println("No seats available or invalid flight ID in table: " + table.getTableName());
+                return false;
+            }
+        }
     }
 
 
@@ -281,7 +327,7 @@ public class Database implements DatabaseInterface {
         for (int i = 0; i < tables.size(); i++) {
             String tableName = tables.get(i).getTableName();
             sb.append("SELECT ")
-                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, ")
+                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, SeatsAvailable, ")
                     .append("'").append(tableName).append("' AS airline ")
                     .append("FROM ").append(tableName);
             if (i < tables.size() - 1) {
@@ -289,15 +335,16 @@ public class Database implements DatabaseInterface {
             }
         }
         sb.append(" ORDER BY DepartDateTime ASC LIMIT 1");
-
-        try (PreparedStatement pstmt = connection.prepareStatement(sb.toString())) {
+        String sql = sb.toString();;
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return new Flight(rs);
+                } else {
+                    throw new SQLException("No flights found for tables: " + tables + " and query: " + sql);
                 }
             }
         }
-        return null;
     }
 
 
@@ -307,7 +354,7 @@ public class Database implements DatabaseInterface {
         for (int i = 0; i < tables.size(); i++) {
             String tableName = tables.get(i).getTableName();
             sb.append("SELECT ")
-                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, ")
+                    .append("id, DepartDateTime, ArriveDateTime, DepartAirport, ArriveAirport, FlightNumber, SeatsAvailable, ")
                     .append("'").append(tableName).append("' AS airline ")
                     .append("FROM ").append(tableName);
             if (i < tables.size() - 1) {
@@ -338,6 +385,7 @@ public class Database implements DatabaseInterface {
                     .append("DepartAirport, ")
                     .append("ArriveAirport, ")
                     .append("FlightNumber, ")
+                    .append("SeatsAvailable, ")
                     .append("'").append(tableName).append("' AS airline ")
                     .append("FROM ").append(tableName)
                     .append(" WHERE id = ?");
