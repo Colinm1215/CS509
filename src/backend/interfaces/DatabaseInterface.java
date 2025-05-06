@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface DatabaseInterface extends AutoCloseable {
+    ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables,
+                                                          String sortBy,
+                                                          List<Object> params) throws SQLException;
 
     ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables,
                                              String sortBy,
@@ -19,9 +22,7 @@ public interface DatabaseInterface extends AutoCloseable {
         @Override
     void close() throws SQLException;
 
-    FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException;
+    public FlightInterface getFlightWithEarliestDeparture(List<AirlineTable> tables) throws SQLException;
 
     FlightInterface getFlightWithLatestDeparture(List<AirlineTable> tables) throws SQLException;
-
-    FlightInterface selectFlightById(List<AirlineTable> tables, int id) throws SQLException;
 }
