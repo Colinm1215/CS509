@@ -82,23 +82,16 @@ public class SearchService {
                 Timestamp endTime2 = Timestamp.valueOf(latestSecond);
                 params.add(startTime2);
                 params.add(endTime2);
-                ArrayList<ArrayList<FlightInterface>> roundTrips = flightRepo.selectRoundTrip(
+                ArrayList<FlightInterface> roundTrips = flightRepo.selectRoundTrip(
                         airlines, sort, params
                 );
 
-                List<FlightInterface> outbound = roundTrips.get(0);
-                List<FlightInterface> returns = roundTrips.get(1);
-                if (outbound.isEmpty()){
-                    System.out.println("No outbound flight plans with <3 connections found.");
-                }
-                else if (returns.isEmpty()){
-                    System.out.println("No return flight plans with <3 connections found.");
+                if (!roundTrips.isEmpty()) {
+                    System.out.println("Round-trip flight options: ");
+                    roundTrips.forEach(System.out::println);
                 }
                 else {
-                    System.out.println("Outbound flight options: ");
-                    outbound.forEach(System.out::println);
-                    System.out.println("Return flight options: ");
-                    outbound.forEach(System.out::println);
+                    System.out.println("No round-trip flights found.");
                 }
             }
             else // One-way
