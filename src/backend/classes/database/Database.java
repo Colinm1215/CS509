@@ -7,6 +7,7 @@ import enums.AirlineTable;
 
 import java.sql.*;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -195,20 +196,25 @@ public class Database implements DatabaseInterface {
 
     private List<Object> ensureFullDayRange(List<Object> params) {
         params = new ArrayList<>(params);
+
         if (params.get(2) instanceof Timestamp && params.get(3) instanceof Timestamp) {
             Timestamp start = (Timestamp) params.get(2);
             Timestamp end = (Timestamp) params.get(3);
 
-            if (!start.before(end)) {
-                LocalDateTime startOfDay = start.toLocalDateTime().toLocalDate().atStartOfDay();
-                LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+            LocalDate startDate = start.toLocalDateTime().toLocalDate();
+            LocalDate endDate = end.toLocalDateTime().toLocalDate();
 
+            if (startDate.equals(endDate)) {
+                LocalDateTime startOfDay = startDate.atStartOfDay();
+                LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
                 params.set(2, Timestamp.valueOf(startOfDay));
                 params.set(3, Timestamp.valueOf(endOfDay));
             }
         }
+
         return params;
     }
+
 
     public ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
         System.out.println("In Database.java");

@@ -134,7 +134,7 @@ function FlightResults({ data, onSelect, label }) {
     );
 }
 
-function ReturnResults({ data, onSelect, label }) {
+function ReturnFlightResults({ data, onSelect, label }) {
     const { flights = [], total = 0, hasMore = false } = data;
 
     return (
@@ -611,7 +611,7 @@ export default function FlightSearch() {
                                 onSelect={setSelectedFlight}
                             />
                         ) : (
-                            <ReturnResults
+                            <ReturnFlightResults
                                 data={data}
                                 onSelect={setSelectedFlight}
                             />
