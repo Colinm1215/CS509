@@ -69,7 +69,7 @@ function FlightResults({ data, onSelect, label }) {
                                 <motion.li
                                     key={flight.id}
                                     onClick={() => {
-                                        onSelect(flight.id)
+                                        onSelect(flight)
                                     }}
                                     initial={{opacity: 0, y: 10}}
                                     animate={{opacity: 1, y: 0}}
@@ -89,7 +89,6 @@ function FlightResults({ data, onSelect, label }) {
                                             Duration: {duration}
                                         </p>
                                     </div>
-                                    <div className="text-2xl">✈️</div>
                                 </motion.li>
                                 );
                             } else {
@@ -98,7 +97,7 @@ function FlightResults({ data, onSelect, label }) {
                                     <motion.li
                                         key={flight.id}
                                         onClick={() => {
-                                            onSelect(flight.id)
+                                            onSelect(flight)
                                         }}
                                         initial={{opacity: 0, y: 10}}
                                         animate={{opacity: 1, y: 0}}
@@ -124,7 +123,6 @@ function FlightResults({ data, onSelect, label }) {
                                                 Stops: {countSegments(flight)}
                                             </p>
                                         </div>
-                                        <div className="text-2xl">✈️</div>
                                     </motion.li>
                                 );
                             }
@@ -173,7 +171,7 @@ function ReturnResults({ data, onSelect, label }) {
                                         <motion.li
                                             key={`${flight.id}-${idx}`}
                                             onClick={() => {
-                                                onSelect(flight.id)
+                                                onSelect(flight)
                                             }}
                                             initial={{opacity: 0, y: 10}}
                                             animate={{opacity: 1, y: 0}}
@@ -217,7 +215,7 @@ function ReturnResults({ data, onSelect, label }) {
                                         <motion.li
                                             key={`${flight.id}-${idx}`}
                                             onClick={() => {
-                                                onSelect(flight.id)
+                                                onSelect(flight)
                                             }}
                                             initial={{opacity: 0, y: 10}}
                                             animate={{opacity: 1, y: 0}}
@@ -269,7 +267,7 @@ function ReturnResults({ data, onSelect, label }) {
                                         <motion.li
                                             key={`${flight.id}-${idx}`}
                                             onClick={() => {
-                                                onSelect(flight.id)
+                                                onSelect(flight)
                                             }}
                                             initial={{opacity: 0, y: 10}}
                                             animate={{opacity: 1, y: 0}}
@@ -319,7 +317,7 @@ function ReturnResults({ data, onSelect, label }) {
                                         <motion.li
                                             key={`${flight.id}-${idx}`}
                                             onClick={() => {
-                                                onSelect(flight.id)
+                                                onSelect(flight)
                                             }}
                                             initial={{opacity: 0, y: 10}}
                                             animate={{opacity: 1, y: 0}}
@@ -413,7 +411,7 @@ export default function FlightSearch() {
     const [maxStops, setMaxStops] = useState(0);
     const [airline, setAirline] = useState('');
     const [sortBy, setSortBy] = useState('traveltime');
-    const [selectedFlightId, setSelectedFlightId] = useState(null);
+    const [selectedFlight, setSelectedFlight] = useState(null);
     const [hasMore, setHasMore] = useState(false);
     const [hasPrev, setHasPrev] = useState(false);
 
@@ -576,9 +574,8 @@ export default function FlightSearch() {
                             className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none text-gray-800"
                         >
                             <option value="">Any</option>
-                            <option value="AA">American Airlines</option>
-                            <option value="DL">Delta</option>
-                            <option value="UA">United</option>
+                            <option value="deltas">Delta</option>
+                            <option value="southwests">Southwest</option>
                         </select>
                     </div>
 
@@ -611,12 +608,12 @@ export default function FlightSearch() {
                         oneWay ? (
                             <FlightResults
                                 data={data}
-                                onSelect={setSelectedFlightId}
+                                onSelect={setSelectedFlight}
                             />
                         ) : (
                             <ReturnResults
                                 data={data}
-                                onSelect={setSelectedFlightId}
+                                onSelect={setSelectedFlight}
                             />
                         )
                     ) : (
@@ -650,7 +647,7 @@ export default function FlightSearch() {
                             Next
                         </button>
                     </div>
-                    {selectedFlightId && <FlightDetails flightId={selectedFlightId} onClose={() => setSelectedFlightId(null)} />}
+                    {selectedFlight && <FlightDetails flight={selectedFlight} onClose={() => setSelectedFlight(null)} />}
                 </div>
             </div>
         </div>
