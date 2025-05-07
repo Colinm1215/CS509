@@ -12,4 +12,6 @@ public interface FlightInterface {
     String getAirline();
     int getSeatsFree();
     void reserved();
+    FlightInterface getNextFlight();
+    FlightInterface getReturnTrip();
 }

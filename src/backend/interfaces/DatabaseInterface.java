@@ -15,6 +15,7 @@ public interface DatabaseInterface extends AutoCloseable {
     int insertFlight(AirlineTable table, List<Object> params) throws SQLException;
 
     ArrayList<Integer> updateTables(List<AirlineTable> tables, List<Object> params) throws SQLException;
+    boolean decreaseSeatsAvailable(AirlineTable table, int flightId) throws SQLException;
 
         @Override
     void close() throws SQLException;
@@ -25,6 +26,6 @@ public interface DatabaseInterface extends AutoCloseable {
 
     FlightInterface selectFlightById(List<AirlineTable> tables, int id) throws SQLException;
 
-    ArrayList<ArrayList<FlightInterface>> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException;
+    ArrayList<FlightInterface> selectRoundTrip(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException;
 
 }
