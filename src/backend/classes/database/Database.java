@@ -193,12 +193,29 @@ public class Database implements DatabaseInterface {
                 : airportWithParen;
     }
 
+    private List<Object> ensureFullDayRange(List<Object> params) {
+        params = new ArrayList<>(params);
+        if (params.get(2) instanceof Timestamp && params.get(3) instanceof Timestamp) {
+            Timestamp start = (Timestamp) params.get(2);
+            Timestamp end = (Timestamp) params.get(3);
+
+            if (!start.before(end)) {
+                LocalDateTime startOfDay = start.toLocalDateTime().toLocalDate().atStartOfDay();
+                LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+
+                params.set(2, Timestamp.valueOf(startOfDay));
+                params.set(3, Timestamp.valueOf(endOfDay));
+            }
+        }
+        return params;
+    }
+
     public ArrayList<FlightInterface> selectFlights(List<AirlineTable> tables, String sortBy, List<Object> params) throws SQLException {
         System.out.println("In Database.java");
         System.out.println("Params are " + params);
         System.out.println("Tables are " + tables);
         System.out.println("Sort by is " + sortBy);
-
+        params = ensureFullDayRange(params);
 
         int maxStops = (int) params.get(4);
         String airlinePref = ((String) params.get(5)).toLowerCase();
