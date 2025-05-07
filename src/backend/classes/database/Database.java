@@ -195,17 +195,13 @@ public class Database implements DatabaseInterface {
 
     private List<Object> ensureFullDayRange(List<Object> params) {
         params = new ArrayList<>(params);
-        if (params.get(2) instanceof Timestamp && params.get(3) instanceof Timestamp) {
+        if (params.get(2) instanceof Timestamp) {
             Timestamp start = (Timestamp) params.get(2);
-            Timestamp end = (Timestamp) params.get(3);
+            LocalDateTime startOfDay = start.toLocalDateTime().toLocalDate().atStartOfDay();
+            LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
 
-            if (!start.before(end)) {
-                LocalDateTime startOfDay = start.toLocalDateTime().toLocalDate().atStartOfDay();
-                LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
-
-                params.set(2, Timestamp.valueOf(startOfDay));
-                params.set(3, Timestamp.valueOf(endOfDay));
-            }
+            params.set(2, Timestamp.valueOf(startOfDay));
+            params.set(3, Timestamp.valueOf(endOfDay));
         }
         return params;
     }
